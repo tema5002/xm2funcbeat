@@ -8,8 +8,11 @@ ifstream F("BFIce.xm", ios::binary);
 typing typingers typi
 why was blud observing me
 wow it did Nothing!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-did you make the webmook <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
+did you make the webmook <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+did you make the webmook 
+yeah did you push anything
+not yet
+check deezstaff
 */
 
 char read_byte() {

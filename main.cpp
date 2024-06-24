@@ -12,6 +12,7 @@ did you make the webmook <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 did you make the webmook 
 yeah did you push anything
 not yet
+check deezstaff
 */
 
 char read_byte() {
