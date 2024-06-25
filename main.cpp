@@ -1,278 +1,57 @@
 #include <bits/stdc++.h>
-#include <fstream>
+#include "xm_reader.hpp"
 using namespace std;
-
-ifstream F("tech.xm", ios::binary);
-
-bool hasFlag(int byte, int flag) {
-    return byte & (1 << flag);
-}
-
-char readByte() {
-    if (!F) {
-        cout << "not functional bird emoji" << endl;
-        exit(1);
-    }
-    char c = F.get();
-    cout << c;
-    return c;
-}
-
-int readInt(int b) {
-    int s = 0;
-    for (int i = 0; i < b; i++) {
-        s += readByte() * (int)pow(256, i);
-    }
-    return s;
-}
-
-int readSignedByte() {
-    int b = readInt(1);
-    return (b >= 128) ? b - 256 : b;
-}
-
-short readSignedShort() {
-    short s;
-    s = readInt(1);
-    s <<= 8;
-    s |= readInt(1);
-    return s;
-}
-
-vector<char> readBytes(int b) {
-    vector<char> bytes;
-    for (int i = 0; i < b; i++) {
-        bytes.push_back(readByte());
-    }
-    return bytes;
-}
-
-string readString(int b) {
-    string s;
-    for (int i = 0; i < b; i++) {
-        s.push_back(readByte());
-    }
-    return s;
-}
-
-void skipBytes(int b) {
-    for (int i = 0; i < b; i++)
-        readByte();
-}
-
-class Pattern {
-    public:
-    Pattern(int channels_amount) {
-        if (channels_amount != -1) {
-            skipBytes(4); // Pattern header length
-            skipBytes(1); // Packing type
-            number_of_rows = readInt(2);
-            packed_size = readInt(2);
-            
-            data = new char**[number_of_rows];
-            for (int i = 0; i < number_of_rows; i++) {
-                data[i] = new char*[channels_amount];
-                for (int j = 0; j < channels_amount; j++) {
-                    char* cell = new char[5];
-                    int byte = (int)readByte();
-                    if (hasFlag(byte, 7)) {
-                        if (hasFlag(byte, 0)) cell[0] = readByte();
-                        if (hasFlag(byte, 1)) cell[1] = readByte();
-                        if (hasFlag(byte, 2)) cell[2] = readByte();
-                        if (hasFlag(byte, 3)) cell[3] = readByte();
-                        if (hasFlag(byte, 4)) cell[4] = readByte();
-                    }
-                    else {
-                        cell[0] = (char)byte; // note
-                        cell[1] = readByte(); // instrument
-                        cell[2] = readByte(); // volume
-                        cell[3] = readByte(); // effect
-                        cell[4] = readByte(); // effect parameter
-                    }
-                    data[i][j] = cell;
-                }
-            }
-        }
-    }
-    int number_of_rows = 0;
-    int packed_size = 0;
-    char*** data;
-};
-
-class Sample {
-    public:
-    void read_sample_header() {
-        cout << "reading sample header: ";
-        length = readInt(4);
-        loop_start = readInt(4);
-        loop_length = readInt(4);
-        volume = readInt(1);
-        finetune = readSignedByte();
-        type = readInt(1);
-        panning = readInt(1);
-        relative_note = readSignedByte();
-        reserved = readInt(1);
-        name = readString(22);
-        cout << name << endl;
-    }
-
-    void read_sample_data() {
-        data = new short[length];
-        if (hasFlag(type, 4)) {
-            for (int i = 0; i < length; i++) {
-                data[i] = readSignedByte();
-            }
-        }
-        else {
-            for (int i = 0; i < length/2; i++) {
-                data[i] = readSignedShort();
-            }
-        }
-        short old_temp = 0, new_temp = 0;
-        for (int i = 0; i < length; i++) {
-            new_temp = data[i] + old_temp;
-            data[i] = new_temp;
-            old_temp = new_temp;
-        }
-    }
-    unsigned int length = 0;
-    unsigned int loop_start = 0;
-    unsigned int loop_length = 0;
-    int volume = 0;
-    int finetune = 0;
-    int type = 0;
-    int panning = 0;
-    int relative_note = 0;
-    int reserved;
-    string name = "";
-    short* data;
-};
-
-class Instrument {
-    public:
-    Instrument() {
-        int header_size = readInt(4);
-        name = readString(22);
-        skipBytes(1); // Instrument type
-        number_of_samples = readInt(2);
-        if (number_of_samples > 0) {
-            skipBytes(4); // Sample header size
-            for (int i = 0; i < 96; i++) {
-                sample_number_for_all_notes[i] = (int)readByte();
-            }
-            for (int i = 0; i < 12; i++) {
-                volume_envelope_points[i] = {readInt(2), readInt(2)};
-            }
-            for (int i = 0; i < 12; i++) {
-                panning_envelope_points[i] = {readInt(2), readInt(2)};
-            }
-            volume_envelope_points_amount = readInt(1);
-            panning_envelope_points_amount = readInt(1);
-            volume_sustain_point = readInt(1);
-            volume_loop_start_point = readInt(1);
-            volume_loop_end_point = readInt(1);
-            panning_sutain_point = readInt(1);
-            panning_loop_start_point = readInt(1);
-            panning_loop_end_point = readInt(1);
-            volume_type = readInt(1);
-            panning_type = readInt(1);
-            vibtype = readInt(1);
-            vibsweep = readInt(1);
-            vibdepth = readInt(1);
-            vibrate = readInt(1);
-            volume_fadeout = readInt(2);
-            reserved = readInt(2);
-            skipBytes(header_size - 243);
-            samples = new Sample[number_of_samples];
-            for (int i = 0; i < number_of_samples; i++) {
-                samples[i].read_sample_header();
-            }/*
-            for (int i = 0; i < number_of_samples; i++) {
-                samples[i].read_sample_data();
-            }*/
-        } else skipBytes(header_size - 29);
-    }
-    
-    string name = "";
-    int number_of_samples = 0;
-    int sample_number_for_all_notes[96];
-    complex<int> volume_envelope_points[12];
-    complex<int> panning_envelope_points[12];
-    int volume_envelope_points_amount = 0;
-    int panning_envelope_points_amount = 0;
-    int volume_sustain_point = 0;
-    int volume_loop_start_point = 0;
-    int volume_loop_end_point = 0;
-    int panning_sutain_point = 0;
-    int panning_loop_start_point = 0;
-    int panning_loop_end_point = 0;
-    int volume_type = 0;
-    int panning_type = 0;
-    int vibtype = 0;
-    int vibsweep = 0;
-    int vibdepth = 0;
-    int vibrate = 0;
-    int volume_fadeout = 0;
-    int reserved = 0;
-
-    Sample* samples;
-};
-
-class XModule {
-    public:
-    XModule() {
-        skipBytes(17);  // "Extended Module:"
-        name = readString(20);
-        skipBytes(1);  // 0x1A
-        skipBytes(20);  // Tracker name
-        skipBytes(2);  // Tracker version
-        skipBytes(4);  // Header size
-        song_length = readInt(2);
-        song_restart_position = readInt(2);
-        channels = readInt(2);
-        patterns_amount = readInt(2);
-        instruments_amount = readInt(2);
-        flags = readInt(2);
-        tempo = readInt(2);
-        bpm = readInt(2);
-        pattern_order_table = new int[patterns_amount];
-        for (int i = 0; i < 256; i++) {
-            int byte = readByte();
-            if (i < patterns_amount) {
-                pattern_order_table[i] = byte;
-            }
-        }
-        for (int i = 0; i < patterns_amount; i++) {
-            patterns.push_back(Pattern(channels));
-        }
-        for (int i = 0; i < instruments_amount; i++) {
-            instruments.push_back(Instrument());
-        }
-    }
-    string name;
-    int song_length;
-    int song_restart_position;
-    int channels;
-    int patterns_amount;
-    int instruments_amount;
-    int flags;
-    int tempo;
-    int bpm;
-    int* pattern_order_table;
-    vector<Pattern> patterns;
-    vector<Instrument> instruments;
-};
 
 int main() {
     XModule mod;
-    int k = 0;
-    while (F) {
-        readByte();
-        k++;
-    }
-    F.close();
-    cout << k << endl;
-    for (int i = 0; i < mod.patterns_amount; i++)
-        cout << (int)mod.pattern_order_table[i] << ' ';
+    setFstream("xm/BFIce.xm");
+    mod.read_data();
+
+    /*
+    for dtpls
+    copy this somewhere and remove idk
+
+    note: vectors can be used same as arrays
+    XModule (mod)
+    .pattern_order_table
+        array of ints like [0, 3, 46, 24]
+        order of the song
+
+    .patterns
+        vector of Patterns
+        to play the order above you would need to get Patterns like that (please use for loop instead):
+        Pattern pattern1 = mod.patterns[0];
+        Pattern pattern2 = mod.patterns[3];
+        Pattern pattern3 = mod.patterns[46];
+        Pattern pattern4 = mod.patterns[24];
+
+    .instruments
+        vector of Instruments
+        works the same as mod.patterns
+
+    Pattern
+    .number_of_rows (int):
+        length of pattern
+    .data (char***)
+        3d matrix of chars
+        use it like mod.patterns[pattern index].data[row][channel][data]
+        for example to get note of third channel in second row in first pattern do:
+        int note = mod.patterns[0].data[1][2][0];
+        0 - note
+        1 - instrument
+        2 - volume
+        3 - fx
+        4 - fx data
+
+    Instrument
+        all the variables are very self explainating
+        idk what sample_number_for_all_notes is
+        use volume/panning_envelope_points[index].real()/.imag() to get X and Y btw
+    .samples
+        vector of Samples
+
+    Sample
+        all variables are also self explaining
+    */
     return 0;
 }

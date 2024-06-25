@@ -31,4 +31,8 @@
 *.out
 *.app
 
-.ccls-cache/
+/.ccls-cache/
+*.xm
+/main
+/main-debug
+/.git/
