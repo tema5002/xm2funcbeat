@@ -13,7 +13,7 @@ bool hasFlag(int byte, int flag) {
 
 byte readByte() {
     if (!F) {
-        cout << "not functional bird emoji" << endl;
+        cout << "error: reached end of file" << endl;
         exit(1);
     }
     byte c = F.get();
@@ -68,6 +68,7 @@ class Pattern {
         skipBytes(4); // Pattern header length
         skipBytes(1); // Packing type
         number_of_rows = readInt(2);
+        channels = channels_amount;
         cout << "reading some pattern which length is " << number_of_rows << endl;
         skipBytes(2); // Packed size (somehow unused)
 
@@ -95,6 +96,7 @@ class Pattern {
             }
         }
     }
+    int channels = 2; // by default
     int number_of_rows = 0;
     byte*** data;
 };
@@ -146,7 +148,7 @@ class Sample {
     int type = 0;
     int panning = 0;
     int relative_note = 0;
-    int reserved;
+    int reserved = 0;
     string name = "";
     short* data;
 };
@@ -205,8 +207,8 @@ class Instrument {
     int number_of_samples = 0;
     int sample_header_size = 0;
     int sample_number_for_all_notes[96];
-    complex<int> volume_envelope_points[12];
-    complex<int> panning_envelope_points[12];
+    pair<int,int> volume_envelope_points[12];
+    pair<int,int> panning_envelope_points[12];
     int volume_envelope_points_amount = 0;
     int panning_envelope_points_amount = 0;
     int volume_sustain_point = 0;
@@ -268,6 +270,7 @@ class XModule {
             instruments.push_back(inst);
         }
         F.close();
+        cout << "done reading data" << endl;
     }
     string name;
     int song_length;

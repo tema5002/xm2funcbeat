@@ -31,8 +31,14 @@
 *.out
 *.app
 
+# Other files
 /.ccls-cache/
 *.xm
 /main
 /main-debug
 /.git/
+*.js
+
+# kreisi
+*.replit
+/replit.nix
