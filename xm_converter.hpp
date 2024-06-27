@@ -15,13 +15,13 @@ string convertSampleToPCM(Sample sample){
     out += ']';
     return out;
 }
-// lets call it sanitizeString or something
+
 string strip(const string &str) {
     string temp = "";
     for (int i = 0; i < str.length(); i++) {
         char x = str[i];
+        if (x == '"' || x == '\\') temp += "\\";
         if (0x20 < x && x < 0x7f) temp += x;
-        if (x == '"') temp += "\\\"";
     };
     return temp;
 }
@@ -31,13 +31,7 @@ string writeInfo(string name, string data) {
 }
 
 string writeStringInfo(string name, string data) {
-    string data2 = "";
-    for(int i=0;i<data.size();i++){
-        char ch=data[i];
-        if(ch=='"'||ch=='\\') data2+="\\";
-        data2+=ch;
-    };
-    return writeInfo(name, "\"" + data2 + "\"");
+    return writeInfo(name, "\"" + strip(data) + "\"");
 }
 
 string writeInt(string name, int data) {
@@ -70,6 +64,7 @@ string convertInstrumentToJSON(Instrument inst) {
         if (i != inst.number_of_samples - 1) out += ",";
     }
     out += "]";
+
     // other instruments info
     out += ",\"volume_envelope_points\":[";
     for (int i = 0; i < 12; i++) {
@@ -78,6 +73,7 @@ string convertInstrumentToJSON(Instrument inst) {
         if (i != 11) out += ",";
     }
     out += "],";
+
     out += "\"panning_envelope_points\":[";
     for (int i = 0; i < 12; i++) {
         auto a = inst.panning_envelope_points[i];
@@ -85,6 +81,7 @@ string convertInstrumentToJSON(Instrument inst) {
         if (i != 11) out += ",";
     }
     out += "],";
+
     out += writeInt("volume_envelope_points_amount", inst.volume_envelope_points_amount)+",";
     out += writeInt("panning_envelope_points_amount",inst.panning_envelope_points_amount)+",";
     out += writeInt("volume_sustain_point",          inst.volume_sustain_point)+",";
@@ -135,7 +132,7 @@ string convertPatternToJSON(Pattern pattern) {
         }
         out += "]";
         if (i != pattern.channels - 1) out += ",";
-        out += "\n";
+        out += " ";
     }
     out += "]";
     return out;
@@ -171,9 +168,9 @@ string convertXmToFuncbeat(XModule m) { // you cho puppies for morning 😎😎�
     }
     output += "];";
     output += "\nlet instruments = ";
-    output += convertInstrumentListToJSON(m.instruments, m.instruments_amount)+";";
+    output += convertInstrumentListToJSON(m.instruments, m.instruments_amount) + ";";
     output += "\nlet patterns = ";
-    output += convertPatternListToJSON(m.patterns, m.patterns_amount)+";";
+    output += convertPatternListToJSON(m.patterns, m.patterns_amount) + ";";
 
     ifstream Fin("utilities.js");
     while (Fin) {
@@ -182,10 +179,6 @@ string convertXmToFuncbeat(XModule m) { // you cho puppies for morning 😎😎�
         output += "\n" + s;
     }
     Fin.close();
-
-    /*output += "\nreturn function(t, sampleRate) {";
-    output += "\n    return t;";
-    output += "\n};";*/
 
     return output;
 }

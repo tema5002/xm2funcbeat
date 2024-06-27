@@ -37,8 +37,7 @@
 /main
 /main-debug
 /.git/
-*.js
-
-# kreisi
+/output.js
+/testing.js
 *.replit
 /replit.nix
