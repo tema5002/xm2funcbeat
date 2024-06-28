@@ -10,9 +10,9 @@ void writeToFile(string content) {
     myfile.close();
 }
 
-int main() { // for some reason you have to update main.cpp to make everything RECOMPIELELELE
+int main() { // for some reason you have to update main.cpp to make everything RECOMPIELELELE recompiling moment
     XModule mod;
-    setFstream("xm/testing.xm"); // it weighs 3 kb so lets test on it
+    setFstream("xm/testing.xm"); // it weighs 3 kb so lets test on it are you serious make clean is a bushes
     mod.read_data();
     //cout << readFile("utilities.js") << endl;
     string converted = convertXmToFuncbeat(mod);
@@ -22,8 +22,8 @@ int main() { // for some reason you have to update main.cpp to make everything R
 /*
 // update this everytime you did not update this file and want to run it
 // ########ASDFMOVIE15ISHEREdonotdeletethis#################
-UPDATE THE MAFFAKING FILE!!!!!!?!
-
-
-
+UPDATE THE MAFFAKING FILE!!!!!!?!o
+reE error happens exactly when it reads patterns COMPRESS MY ASSЬЬЬЬЬЬЬЬЬЬЬЬЬЬЬЬЬ� fuc
+seggmentation ault uh ohogoggogoggogoggii
+fuck
 */

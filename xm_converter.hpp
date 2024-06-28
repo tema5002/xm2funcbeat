@@ -1,18 +1,42 @@
 #include <bits/stdc++.h>
 #include <iostream>
+#include <fstream>
 typedef uint8_t byte;
 typedef int8_t sbyte;
 using namespace std;
 
+string convertIntToHex(int in){
+    ostringstream ss;
+    ss << hex << in;
+    return ss.str();
+}
+
+string wstring_to_utf8 (const wchar_t& str){
+    wstring_convert<codecvt_utf8<wchar_t>> myconv;
+    return myconv.to_bytes(str);
+}
+
 string convertSampleToPCM(Sample sample){
     cout << "converting sample \"" << sample.name << "\" to pcm\n";
     short* data = sample.data;
-    string out = "[";
-    for (int i = 0; i < sample.length; i++){
-        out += to_string(data[i]+32768);
-        if ( i != sample.length-1 ) out += ",";
+    string out = "\""; // then what
+    for (int i = 0; i < sample.length; i++){ // do you want to use strings here or what are you doing
+        int temp = data[i]+32768;
+        if(temp<21){
+            string hex = convertIntToHex(temp);
+            while(hex.size()<2){
+                hex = "0"+hex;
+            }
+            out += "\\x"+hex;
+        } else {
+            wchar_t temp2 = wchar_t(temp);
+            if (temp2==L'\"' || temp2==L'\\'){ // nvm i didnt notice the second // why would it be 8 numbers if there are 2 channels
+                out += '\\';
+            };
+            out += wstring_to_utf8(temp2);
+        }
     };
-    out += ']';
+    out += '"';
     return out;
 }
 
@@ -115,26 +139,30 @@ string convertInstrumentListToJSON(vector<Instrument> insts, int amount){
 
 string compressPattern(byte data[5]) {
     long int out = 0;
-    for (int i = 0; i < 5; i++) {
-        out += data[i] * pow(2, i * 8);
+    for (int a = 0; a < 5; a++) {
+        out += data[a] * pow(2, a * 8);
     }
     return to_string(out);
 }
 
 string convertPatternToJSON(Pattern pattern) {
-    cout << "converting some pattern" << endl;
+    cout << "converting some pattern with " << pattern.number_of_rows << " rows and " << pattern.channels << " channels" << endl;
     string out = "[";
-    for (int i = 0; i < pattern.channels; i++) {
+    for (int i = 0; i < pattern.number_of_rows; i++) {
         out += "[";
-        for (int j = 0; j < pattern.number_of_rows; j++) {
-            out += compressPattern(pattern.data[j][i]);
-            if (j != pattern.number_of_rows - 1) out += ",";
+        for (int j = 0; j < pattern.channels; j++) { // wdym bro yes it is that where is the last "done compressing shit"
+            cout << "converting pattern row " << i << " channel " << j;
+            out += compressPattern(pattern.data[j][i]); // nvm WHY DOESNT IT WORK? COck
+            if (j != pattern.channels - 1) out += ","; // lets see if it prints converted pattern to jay son
+            cout << " done" << endl; // it always prints done idk
         }
         out += "]";
-        if (i != pattern.channels - 1) out += ",";
-        out += " ";
-    }
+        if (i != pattern.number_of_rows - 1) out += ",";
+        cout << "done converting the row " << i << ". out string is now in length " << out.length() << endl;
+    } // error is here 💀💀💀💀💀
+    cout << "done converting the goddamn pattern" << endl;
     out += "]";
+    cout << "converted pattern to json" << endl;
     return out;
 }
 
