@@ -152,7 +152,7 @@ string convertPatternToJSON(Pattern pattern) {
         out += "[";
         for (int j = 0; j < pattern.channels; j++) { // wdym bro yes it is that where is the last "done compressing shit"
             cout << "converting pattern row " << i << " channel " << j;
-            out += compressPattern(pattern.data[j][i]); // nvm WHY DOESNT IT WORK? COck
+            out += compressPattern(pattern.data[i][j]); // nvm WHY DOESNT IT WORK? COck
             if (j != pattern.channels - 1) out += ","; // lets see if it prints converted pattern to jay son
             cout << " done" << endl; // it always prints done idk
         }

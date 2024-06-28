@@ -25,5 +25,5 @@ int main() { // for some reason you have to update main.cpp to make everything R
 UPDATE THE MAFFAKING FILE!!!!!!?!o
 reE error happens exactly when it reads patterns COMPRESS MY ASSЬЬЬЬЬЬЬЬЬЬЬЬЬЬЬЬЬ� fuc
 seggmentation ault uh ohogoggogoggogoggii
-fuck
+furqt
 */
