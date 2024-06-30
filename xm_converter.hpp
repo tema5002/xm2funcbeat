@@ -1,6 +1,7 @@
 #include <bits/stdc++.h>
 #include <iostream>
 #include <fstream>
+#include "xm_reader.hpp"
 typedef uint8_t byte;
 typedef int8_t sbyte;
 using namespace std;
@@ -11,33 +12,69 @@ string convertIntToHex(int in){
     return ss.str();
 }
 
-string wstring_to_utf8 (const wchar_t& str){
+string wchar_to_utf8 (const wchar_t& str){
     wstring_convert<codecvt_utf8<wchar_t>> myconv;
     return myconv.to_bytes(str);
 }
 
-string convertSampleToPCM(Sample sample){
-    cout << "converting sample \"" << sample.name << "\" to pcm\n";
+string wstring_to_utf8 (const wstring& str){
+    wstring_convert<codecvt_utf8<wchar_t>> myconv;
+    return myconv.to_bytes(str);
+}
+
+string convertIntToBytes(int input, bool isShort) {
+    string outputstr;
+    outputstr += (char)input%0x100;
+    outputstr += (char)input/0x100;
+    if (!isShort) outputstr += (char)input/0x10000;
+    if (!isShort) outputstr += (char)input/0x1000000;
+    return outputstr;
+}
+
+void saveSampleToFile(Sample sample){
+    ofstream myfile;
+    myfile.open("sample.wav");
+    myfile << "RIFF" << convertIntToBytes(sample.length+36, false) << "WAVEfmt \u0010\0\0\0\u0001\0\1" << convertIntToBytes(48000, false) << convertIntToBytes(48000 * (sample.has16Bits+1), false) << convertIntToBytes((sample.has16Bits+1), true) << convertIntToBytes((sample.has16Bits+1), true) << "data" << convertIntToBytes(sample.length*(sample.has16Bits+1), false);
+    if (sample.has16Bits) for(int i=0;i<sample.length;i++) myfile << convertIntToBytes(sample.data[i], true);
+    else for(int i=0;i<sample.length;i++) myfile << char(sample.data[i]);
+    myfile.close();
+} // debug
+
+wstring s2ws(const string& str)
+{
+    using convert_typeX = codecvt_utf8<wchar_t>;
+    wstring_convert<convert_typeX, wchar_t> converterX;
+
+    return converterX.from_bytes(str);
+}
+
+string convertSampleToPCM(Sample sample,bool verbose){
+    if(verbose) cout << "        Сonverting sample \"" << sample.name << "\" to pcm\n";
     short* data = sample.data;
-    string out = "\""; // then what
-    for (int i = 0; i < sample.length; i++){ // do you want to use strings here or what are you doing
-        int temp = data[i]+32768;
+    wstring out = L"\""; // then what
+    for (int i = 0; i < sample.length; i++) {
+        int temp = 0;
+        if(sample.has16Bits){
+            temp = data[i]+32768;
+        } else {
+            temp = data[i]+32768; // tried multiplying but it broke everything so im leaving it like this for the moment
+        }
         if(temp<21){
             string hex = convertIntToHex(temp);
             while(hex.size()<2){
                 hex = "0"+hex;
             }
-            out += "\\x"+hex;
+            out += L"\\x"+s2ws(hex);
         } else {
             wchar_t temp2 = wchar_t(temp);
             if (temp2==L'\"' || temp2==L'\\'){ // nvm i didnt notice the second // why would it be 8 numbers if there are 2 channels
-                out += '\\';
+                out += L'\\';
             };
-            out += wstring_to_utf8(temp2);
+            out += temp2;
         }
     };
-    out += '"';
-    return out;
+    out += L'"';
+    return wstring_to_utf8(out);
 }
 
 string strip(const string &str) {
@@ -62,8 +99,8 @@ string writeInt(string name, int data) {
     return writeInfo(name, to_string(data));
 }
 
-string convertInstrumentToJSON(Instrument inst) {
-    cout << "converting instrument \"" << inst.name << "\" to sample pcms\n";
+string convertInstrumentToJSON(Instrument inst,bool verbose) {
+    if(verbose) cout << "    Сonverting instrument \"" << inst.name << "\" to sample pcms\n";
     string out = "{";
     out += writeStringInfo("name", strip(inst.name));
     out += ",";
@@ -71,8 +108,8 @@ string convertInstrumentToJSON(Instrument inst) {
     for (int i = 0; i < inst.number_of_samples; i++) {
         out += "{";
         Sample sample = inst.samples[i];
-        out += writeStringInfo("name", sample.name) + ",";
-        string pcm = convertSampleToPCM(sample);
+        out += writeStringInfo("name",   sample.name) + ",";
+        string pcm = convertSampleToPCM(sample,verbose);
         out += writeInfo("data", pcm) + ",";
         // other sample info
         out += writeInt("length",        sample.length) + ",";
@@ -126,11 +163,11 @@ string convertInstrumentToJSON(Instrument inst) {
     return out;
 }
 
-string convertInstrumentListToJSON(vector<Instrument> insts, int amount){
-    cout << "converting instruments to json\n";
+string convertInstrumentListToJSON(vector<Instrument> insts, int amount, bool verbose){
+    cout << "Converting instruments to json\n";
     string out = "[";
     for (int i = 0; i < amount; i++) {
-        out += convertInstrumentToJSON(insts[i]);
+        out += convertInstrumentToJSON(insts[i],verbose);
         if (i != amount - 1) out += ",\n";
     }
     out += "]";
@@ -145,39 +182,38 @@ string compressPattern(byte data[5]) {
     return to_string(out);
 }
 
-string convertPatternToJSON(Pattern pattern) {
-    cout << "converting some pattern with " << pattern.number_of_rows << " rows and " << pattern.channels << " channels" << endl;
+string convertPatternToJSON(Pattern pattern, bool verbose) {
+    if(verbose) cout << "    Converting some pattern with " << pattern.number_of_rows << " rows and " << pattern.channels << " channels\n";
     string out = "[";
     for (int i = 0; i < pattern.number_of_rows; i++) {
         out += "[";
         for (int j = 0; j < pattern.channels; j++) { // wdym bro yes it is that where is the last "done compressing shit"
-            cout << "converting pattern row " << i << " channel " << j;
-            out += compressPattern(pattern.data[i][j]); // nvm WHY DOESNT IT WORK? COck
+            // if(verbose) cout << "            converting pattern row " << i << " channel " << j; // do we really need this?
+            out += compressPattern(pattern.data[i][j]); // someone typed [j][i] instead of [i][j] :skull: check dc dms
             if (j != pattern.channels - 1) out += ","; // lets see if it prints converted pattern to jay son
-            cout << " done" << endl; // it always prints done idk
+            // if(verbose) cout << " done"; // it always prints done idk
         }
         out += "]";
         if (i != pattern.number_of_rows - 1) out += ",";
-        cout << "done converting the row " << i << ". out string is now in length " << out.length() << endl;
-    } // error is here 💀💀💀💀💀
-    cout << "done converting the goddamn pattern" << endl;
+        if(verbose) cout << "        Done converting the row " << i << ". \n";
+    }
     out += "]";
-    cout << "converted pattern to json" << endl;
+    if(verbose) cout << "    converted pattern to json\n";
     return out;
 }
 
-string convertPatternListToJSON(vector<Pattern> patterns, int patterns_amount) {
-    cout << "converting patterns to json" << endl;
+string convertPatternListToJSON(vector<Pattern> patterns, int patterns_amount, bool verbose) {
+    cout << "converting patterns to json\n";
     string out = "[";
     for (int i = 0; i < patterns_amount; i++) {
-        out += convertPatternToJSON(patterns[i]);
+        out += convertPatternToJSON(patterns[i], verbose);
         if (i != patterns_amount - 1) out += ",";
     }
     out += "]";
     return out; 
 }
 
-string convertXmToFuncbeat(XModule m) { // you cho puppies for morning 😎😎😎
+string convertXmToFuncbeat(XModule m,bool verbose) { // you cho puppies for morning 😎😎😎
     string output = "// - epic xm2funcbeat logo goes here - \n";
     output += "// created by tema5002, dtpls_ and ponali\n";
     output += "let name = \"" + m.name + "\";";
@@ -196,9 +232,9 @@ string convertXmToFuncbeat(XModule m) { // you cho puppies for morning 😎😎�
     }
     output += "];";
     output += "\nlet instruments = ";
-    output += convertInstrumentListToJSON(m.instruments, m.instruments_amount) + ";";
+    output += convertInstrumentListToJSON(m.instruments, m.instruments_amount, verbose) + ";";
     output += "\nlet patterns = ";
-    output += convertPatternListToJSON(m.patterns, m.patterns_amount) + ";";
+    output += convertPatternListToJSON(m.patterns, m.patterns_amount, verbose) + ";";
 
     ifstream Fin("utilities.js");
     while (Fin) {
@@ -207,7 +243,7 @@ string convertXmToFuncbeat(XModule m) { // you cho puppies for morning 😎😎�
         output += "\n" + s;
     }
     Fin.close();
-
+    cout << "\nConverting ended" << endl;
     return output;
 }
 

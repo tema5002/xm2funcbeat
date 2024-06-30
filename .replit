@@ -1,5 +1,5 @@
 compile = "make -s"
-run = "./main "
+run = "./main -v ./xm/PINBALL.xm"
 entrypoint = "main.cpp"
 hidden = ["main", "**/*.o", "**/*.d", ".ccls-cache", "Makefile"]
 
@@ -14,7 +14,7 @@ support = true
 
 [debugger.compile]
 command = ["make", "main-debug"]
-noFileArgs = true
+noFileArgs = false
 
 [debugger.interactive]
 transport = "stdio"

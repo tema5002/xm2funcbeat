@@ -13,11 +13,13 @@ bool hasFlag(int byte, int flag) {
 
 byte readByte() {
     if (!F) {
-        cout << "error: reached end of file" << endl;
+        cout << "Error: reached end of file" << endl;
+        cout << "Either your file is invalid or we messed up" << endl;
+        cout << "If you're sure your file is valid report this to us:" << endl;
+        // probably leave your data here idk hoo11717171717
         exit(1);
     }
     byte c = F.get();
-    //cout << c;
     return c;
 }
 
@@ -64,12 +66,12 @@ void skipBytes(int b) {
 
 class Pattern {
     public:
-    void read_data(int channels_amount) {
+    void read_data(int channels_amount, bool verbose) {
         skipBytes(4); // Pattern header length
         skipBytes(1); // Packing type
         number_of_rows = readInt(2);
         channels = channels_amount;
-        cout << "reading some pattern which length is " << number_of_rows << endl;
+        if(verbose) cout << "Reading some pattern which length is " << number_of_rows << "\n";
         skipBytes(2); // Packed size (somehow unused)
 
         data = new byte**[number_of_rows];
@@ -103,8 +105,8 @@ class Pattern {
 
 class Sample {
     public:
-    void read_sample_header() {
-        cout << "    reading sample header for ";
+    void read_sample_header(bool verbose) {
+        if(verbose) cout << "    Reading sample header for ";
         length = readInt(4);
         loop_start = readInt(4);
         loop_length = readInt(4);
@@ -115,20 +117,22 @@ class Sample {
         relative_note = readSignedByte();
         reserved = readInt(1);
         name = readString(22);
-        cout << name << endl;
+        if(verbose) cout << name << "\n";
     }
 
-    void read_sample_data() {
-        cout << "    reading sample data for " << name << " (Length: " << length << ")" << endl;
-        if (hasFlag(type, 4)) length = length / 2;
+    void read_sample_data(bool verbose) {
+        if(verbose) cout << "    Reading sample data for " << name << " (Length: " << length << ")" << "\n";
+        if (hasFlag(type, 4)){
+            length /= 2;
+            has16Bits = true;
+        }
         data = new short[length];
 
         if (!hasFlag(type, 4)) {
             for (int i = 0; i < length; i++) {
                 data[i] = readSignedByte();
             }
-        }
-        else {
+        } else {
             for (int i = 0; i < length; i++) {
                 data[i] = readSignedShort();
             }
@@ -140,6 +144,7 @@ class Sample {
             old_temp = new_temp;
         }
     }
+    bool has16Bits = false;
     int length = 0;
     int loop_start = 0;
     int loop_length = 0;
@@ -155,13 +160,13 @@ class Sample {
 
 class Instrument {
     public:
-    void read_data() {
+    void read_data(bool verbose) {
         int header_size = readInt(4);
         name = readString(22);
         skipBytes(1); // Instrument type
         number_of_samples = readInt(2);
-        cout << "reading instrument: " << name << endl;
-        cout << "samples: " << number_of_samples << endl;
+        if(verbose) cout << "Reading instrument: " << name << "\n";
+        if(verbose) cout << "Samples: " << number_of_samples << "\n";
         if (number_of_samples > 0) {
             sample_header_size = readInt(4);
             for (int i = 0; i < 96; i++) {
@@ -192,11 +197,11 @@ class Instrument {
             skipBytes(header_size - 243);
             samples = new Sample[number_of_samples];
             for (int i = 0; i < number_of_samples; i++) {
-                samples[i].read_sample_header();
+                samples[i].read_sample_header(verbose);
             }
             for (int i = 0; i < number_of_samples; i++) {
                 if (samples[i].length > 0)
-                    samples[i].read_sample_data();
+                    samples[i].read_sample_data(verbose);
             }
         } else {
             skipBytes(header_size - 29);
@@ -231,10 +236,10 @@ class Instrument {
 
 class XModule {
     public:
-    void read_data() {
+    void read_data(bool verbose) {
         skipBytes(17);  // "Extended Module:"
         name = readString(20);
-        cout << "loaded module: " << name << endl;
+        cout << "Reading module: " << name << "\n";
         skipBytes(1);  // 0x1A
         skipBytes(20);  // Tracker name
         skipBytes(2);  // Tracker version
@@ -244,33 +249,32 @@ class XModule {
         channels = readInt(2);
         patterns_amount = readInt(2);
         instruments_amount = readInt(2);
-        cout << "amount of instruments: " << instruments_amount << endl;
+        if(verbose) cout << "Amount of instruments: " << instruments_amount << "\n";
         flags = readInt(2);
-        cout << "flags: " << flags << endl;
         tempo = readInt(2);
         bpm = readInt(2);
         pattern_order_table = new int[patterns_amount];
-        cout << "patterns order:" << endl;
+        if(verbose) cout << "patterns order:" << endl;
         for (int i = 0; i < header_size - 20; i++) {
             int byte = readByte();
             if (i < patterns_amount) {
                 pattern_order_table[i] = byte;
-                cout << byte << ' ';
+                if(verbose) cout << byte << ' ';
             }
         }
         cout << endl;
         for (int i = 0; i < patterns_amount; i++) {
             Pattern pattern;
-            pattern.read_data(channels);
+            pattern.read_data(channels,verbose);
             patterns.push_back(pattern);
         }
         for (int i = 0; i < instruments_amount; i++) {
             Instrument inst;
-            inst.read_data();
+            inst.read_data(verbose);
             instruments.push_back(inst);
         }
         F.close();
-        cout << "done reading data" << endl;
+        cout << "Done reading file" << "\n";
     }
     string name;
     int song_length;
