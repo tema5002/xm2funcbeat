@@ -16,10 +16,10 @@ for (let i = 0; i < patterns.length; i++) { // pattern
             for (let i = 0; i < 5; i++) {
                 bytes[i] = (num >> (i * 8)) & 0xFF;
             }
-            patterns[i][j][k] = bytes; // [[cell, cell, cell], [cell, cell, cell]] -> [[[n,i,v,f,d],[n,i,v,f,d],[n,i,v,f,d]],  [[n,i,v,f,d],[n,i,v,f,d],[n,i,v,f,d]]]
-        } // normally there should be a debug window from throwing an error
-    } // anyway im gonna check entire browser lagged
-} // normally that shouldn't happen. ok i just tried recording it and it was too low quality :/
+            patterns[i][j][k] = bytes;
+        }
+    }
+}
 
 function getSample(note, inst, volume, fx, fx_param, time) {
     let data=instruments[inst-1].samples[0].data;
@@ -27,14 +27,14 @@ function getSample(note, inst, volume, fx, fx_param, time) {
         console.log("no data????? :staring_cat:");
         return 0;
     };
-    return (data[(Math.floor(time))]-0x8000)/0xffff;
+    return (data.charCodeAt(Math.floor(time))-0x8000)/0xffff;
 };
 
 function getNoteFrequency(note,finetune,relativenote){
-    return (noteHz[(note-1)%12]/(2**(8-floor((note-1)/12)))/48000)*(getNoteFrequencyWithoutRelativeNote(relativenote)/getNoteFrequencyWithoutRelativeNote(49)); // i think i fixed it :D
+    return (noteHz[(note-1)%12]/(2**(8-floor((note-1)/12))))*(getNoteFrequencyWithoutRelativeNote(relativenote)/getNoteFrequencyWithoutRelativeNote(49)); // i think i fixed it :D
 }
 function getNoteFrequencyWithoutRelativeNote(note){
-    return noteHz[(note-1)%12]/(2**(8-ceil((note-1)/12)))/48000;
+    return noteHz[(note-1)%12]/(2**(8-ceil((note-1)/12)));
 }
 
 function updateThrowDebug(){
@@ -54,67 +54,82 @@ function updateThrowDebug(){
 
 
 function addSounds(data){
-    for(let ch=0;ch<data.length;ch++){
+    for(let ch = 0; ch < data.length; ch++){
         let elem=data[ch];
-        if(elem[0]!=0){
-            if(elem[0]==97){
+        if (elem[0] != 0){
+            if (elem[0] == 97) {
                 channelCurrentSounds[ch]=null;
-            }else{
+            } else {
                 channelCurrentSounds[ch]={
-                    note:elem[0],
-                    inst:elem[1],
-                    volume:elem[2],
-                    fx:elem[3],
-                    fx_param:elem[4],
-                    time:0,
-                    loops_passed:0
+                    note: elem[0],
+                    inst: elem[1],
+                    volume: elem[2],
+                    fx: elem[3],
+                    fx_param: elem[4],
+                    time: 0,
+                    loops_passed: 0
                 };
             }
         }
     }
 }
 
-return function(t, sampleRate) {try{
-    if(currentPattern<0) currentPattern=0;
-    let time = t*sampleRate;
-    if (time < 5) {
-        cursor = 0; currentPattern = 0; timeWhenCursorWillMove = 0; // mb
-        throw ""
-    }
-    if (sampleRate != 48000) throw "SAMPLE RATE SHOULD BE 48kHz, IF YOU ARE LAGGING, RECORD THE SONG";
-    if (time > timeWhenCursorWillMove) { // update
-        timeWhenCursorWillMove += (60/bpm)*48000*(tempo/24);
-        cursor+= 1;
-        let patternData=patterns[pattern_order_table[currentPattern]];
-        let len=patternData.length;
-        if (cursor > len) { // new pattern
-            cursor=1;
-            currentPattern++;
-            if (currentPattern == pattern_order_table.length) currentPattern = 0;
-        };
-          patternData=patterns[pattern_order_table[currentPattern]]
-        addSounds(patternData[cursor-1]);
-    }
+return function(t, sampleRate) {
+    try {
+        if (currentPattern < 0) currentPattern = 0;
+        let time = t*sampleRate;
+        if (time < 5) {
+            cursor = 0; currentPattern = 0; timeWhenCursorWillMove = 0; // mb
+            throw ""
+        }
+        if (sampleRate != 48000) throw "SAMPLE RATE SHOULD BE 48kHz, IF YOU ARE LAGGING, RECORD THE SONG";
+        if (time > timeWhenCursorWillMove) { // update
+            timeWhenCursorWillMove += (60 / bpm) * 48000 * (tempo / 24);
+            cursor += 1;
+            let patternData = patterns[pattern_order_table[currentPattern]];
+            let len = patternData.length;
+            if (cursor > len) { // new pattern
+                cursor=1;
+                currentPattern++;
+                if (currentPattern == pattern_order_table.length) currentPattern = 0;
+            };
+            patternData = patterns[pattern_order_table[currentPattern]]
+            addSounds(patternData[cursor-1]);
+        }
+    
+        output = 0;
 
-    output=0;
-
-    for(let i=0;i<channelCurrentSounds.length;i++){
-        let current=channelCurrentSounds[i];
-        if(current){
-            if(!current.freq){
-                channelCurrentSounds[i].freq=getNoteFrequency(current.note,0, instruments[current.inst].samples[0].relative_note)
-            }
-            let freq=current.freq;
-            channelCurrentSounds[i].time+=freq;
-            if(current.time>instruments[current.inst-1].samples[0].data.length){
-                channelCurrentSounds[i].loops_passed++;
-                if(channelCurrentSounds[i].loops_passed>[inst].loop_length)
-                channelCurrentSounds[i]=null;
-            }
-            if(channelCurrentSounds[i]){
-                output+=getSample(current.note,current.inst,current.volume,current.fx,current.fx_param,current.time);
+        for (let i = 0; i < channelCurrentSounds.length; i++) {
+            let current=channelCurrentSounds[i];
+            if (current) {
+                var inst = instruments[current.inst]
+                if (!current.freq) {
+                    channelCurrentSounds[i].freq = getNoteFrequency(current.note, 0, inst.samples[0].relative_note)
+                }
+                let freq=current.freq;
+                channelCurrentSounds[i].time += freq/48000;
+                if (current.time > inst.samples[0].data.length){
+                    channelCurrentSounds[i].loops_passed++;
+                    channelCurrentSounds[i].time = 0;
+                    if (channelCurrentSounds[i].loops_passed > inst.loop_length)
+                        channelCurrentSounds[i] = null;
+                }
+                if (channelCurrentSounds[i]) {
+                    output += getSample(current.note, current.inst, current.volume, current.fx, current.fx_param, current.time);
+                }
             }
         }
+    
     }
-
-}catch(e){if(e.stack==errorBefore)console.error(e);errorBefore=e.stack;return 0;};if((t*10)%1<0.001){updateThrowDebug();throw throwOutput};return output};
+    catch(e) {
+        if (e.stack == errorBefore)
+            console.error(e);
+        errorBefore = e.stack;
+        return 0;
+    }
+    if ((t * 10) % 1 < 0.001) {
+        updateThrowDebug();
+        throw throwOutput
+    }
+    return output
+}

@@ -24,24 +24,30 @@ string wstring_to_utf8 (const wstring& str){
 
 string convertIntToBytes(int input, bool isShort) {
     string outputstr;
-    outputstr += (char)input%0x100;
-    outputstr += (char)input/0x100;
-    if (!isShort) outputstr += (char)input/0x10000;
-    if (!isShort) outputstr += (char)input/0x1000000;
+    outputstr += (char)input % 0x100;
+    outputstr += (char)input / 0x100;
+    if (!isShort) outputstr += (char)input / 0x10000;
+    if (!isShort) outputstr += (char)input / 0x1000000;
     return outputstr;
 }
 
 void saveSampleToFile(Sample sample){
     ofstream myfile;
     myfile.open("sample.wav");
-    myfile << "RIFF" << convertIntToBytes(sample.length+36, false) << "WAVEfmt \u0010\0\0\0\u0001\0\1" << convertIntToBytes(48000, false) << convertIntToBytes(48000 * (sample.has16Bits+1), false) << convertIntToBytes((sample.has16Bits+1), true) << convertIntToBytes((sample.has16Bits+1), true) << "data" << convertIntToBytes(sample.length*(sample.has16Bits+1), false);
-    if (sample.has16Bits) for(int i=0;i<sample.length;i++) myfile << convertIntToBytes(sample.data[i], true);
+    myfile << "RIFF" // can you do shenanigans like this?
+        << convertIntToBytes(sample.length+36, false) // chunk size \u0010\u0000\u0000\u0000\u0001\u0000\u0001
+        << "WAVEfmt " << (char)16 << (char)0 << (char)0 << (char)0 << (char)1 << (char)0 << (char)1 << (char)0 // subchunk1size, audioformat, number of channels god forgive me for what i did
+        << convertIntToBytes(48000, false)  // sample rate
+        << convertIntToBytes(48000 * (sample.has16Bits+1), false) // byte rate
+        << convertIntToBytes((sample.has16Bits+1), true)  // block align
+        << convertIntToBytes((sample.has16Bits+1), true) // bits per sample
+        << "data" << convertIntToBytes(sample.length*(sample.has16Bits+1), false); // subchunk2size
+    if (sample.has16Bits) for(int i=0;i<sample.length;i++) myfile << convertIntToBytes(sample.data[i], true); // take a wild guess for what this is
     else for(int i=0;i<sample.length;i++) myfile << char(sample.data[i]);
     myfile.close();
-} // debug
-
-wstring s2ws(const string& str)
-{
+}
+// F
+wstring s2ws(const string& str) {
     using convert_typeX = codecvt_utf8<wchar_t>;
     wstring_convert<convert_typeX, wchar_t> converterX;
 
@@ -55,9 +61,9 @@ string convertSampleToPCM(Sample sample,bool verbose){
     for (int i = 0; i < sample.length; i++) {
         int temp = 0;
         if(sample.has16Bits){
-            temp = data[i]+32768;
+            temp = ((int)data[i])+32768;
         } else {
-            temp = data[i]+32768; // tried multiplying but it broke everything so im leaving it like this for the moment
+            temp = ((int)data[i])+32768; // tried multiplying but it broke everything so im leaving it like this for the moment
         }
         if(temp<21){
             string hex = convertIntToHex(temp);
@@ -82,7 +88,7 @@ string strip(const string &str) {
     for (int i = 0; i < str.length(); i++) {
         char x = str[i];
         if (x == '"' || x == '\\') temp += "\\";
-        if (0x20 < x && x < 0x7f) temp += x;
+        if (0x1f < x && x < 0x7f) temp += x; // 0x20 is space
     };
     return temp;
 }
@@ -108,6 +114,10 @@ string convertInstrumentToJSON(Instrument inst,bool verbose) {
     for (int i = 0; i < inst.number_of_samples; i++) {
         out += "{";
         Sample sample = inst.samples[i];
+
+        // save to wav for testing (it will keep overwriting until the last sample but do i look like i care?)
+        saveSampleToFile(sample);
+        
         out += writeStringInfo("name",   sample.name) + ",";
         string pcm = convertSampleToPCM(sample,verbose);
         out += writeInfo("data", pcm) + ",";
@@ -119,8 +129,7 @@ string convertInstrumentToJSON(Instrument inst,bool verbose) {
         out += writeInt("finetune",      sample.finetune) + ",";
         out += writeInt("type",          sample.type) + ",";
         out += writeInt("panning",       sample.panning) + ",";
-        out += writeInt("relative_note", sample.relative_note) + ",";
-        out += writeInt("reserved",      sample.reserved);
+        out += writeInt("relative_note", sample.relative_note);
         out += "}";
         if (i != inst.number_of_samples - 1) out += ",";
     }
@@ -186,6 +195,7 @@ string convertPatternToJSON(Pattern pattern, bool verbose) {
     if(verbose) cout << "    Converting some pattern with " << pattern.number_of_rows << " rows and " << pattern.channels << " channels\n";
     string out = "[";
     for (int i = 0; i < pattern.number_of_rows; i++) {
+        if(verbose) cout << "        Converting row " << i << "... \r";
         out += "[";
         for (int j = 0; j < pattern.channels; j++) { // wdym bro yes it is that where is the last "done compressing shit"
             // if(verbose) cout << "            converting pattern row " << i << " channel " << j; // do we really need this?
@@ -195,10 +205,9 @@ string convertPatternToJSON(Pattern pattern, bool verbose) {
         }
         out += "]";
         if (i != pattern.number_of_rows - 1) out += ",";
-        if(verbose) cout << "        Done converting the row " << i << ". \n";
     }
     out += "]";
-    if(verbose) cout << "    converted pattern to json\n";
+    if(verbose) cout << "\r    converted pattern to json\n";
     return out;
 }
 

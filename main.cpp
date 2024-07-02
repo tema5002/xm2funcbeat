@@ -1,3 +1,4 @@
+#include <sys/stat.h>
 #include "xm_converter.hpp" // xm reader is included there sooooo
 #include <bits/stdc++.h>
 using namespace std;
@@ -56,6 +57,10 @@ string getOutputFile(int argc, char *argv[]){
     };
     return "";
 };
+bool fileExists(string name){
+    struct stat buffer;   
+    return (stat (name.c_str(), &buffer) == 0); 
+}
 int main(int argc, char *argv[]) {
     bool verbose=false;
     cout << "XM to funcbeat convertor V0. By tema5002, dtpls_ and ponali\n";
@@ -81,6 +86,15 @@ int main(int argc, char *argv[]) {
     cout << "Converting...\n";
     string converted = convertXmToFuncbeat(mod,verbose);
     cout << "Writing to file \"" << output << "\"...\n";
+    if(fileExists(output)){
+        cout << "File \"" << output << "\" already exists. Overwrite? (y/n)";
+        char c;
+        cin >> c;
+        if(c=='n'){
+            cout << "Aborting...\n";
+            return 0;
+        }
+    }
     writeToFile(converted, output);
     return 0;
 }

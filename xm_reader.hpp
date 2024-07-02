@@ -13,10 +13,10 @@ bool hasFlag(int byte, int flag) {
 
 byte readByte() {
     if (!F) {
-        cout << "Error: reached end of file" << endl;
-        cout << "Either your file is invalid or we messed up" << endl;
-        cout << "If you're sure your file is valid report this to us:" << endl;
-        // probably leave your data here idk hoo11717171717
+        cout << "Error: reached end of file\n";
+        cout << "Either your file is invalid or we messed up\n";
+        cout << "If you're sure your file is valid post issue on github\n";
+        cout << "or something idk\n";
         exit(1);
     }
     byte c = F.get();
@@ -115,9 +115,32 @@ class Sample {
         type = readInt(1);
         panning = readInt(1);
         relative_note = readSignedByte();
-        reserved = readInt(1);
+        int reserved = readInt(1);
         name = readString(22);
         if(verbose) cout << name << "\n";
+        if(reserved==0xAD) isADPCM=true;
+    }
+
+    void convertFromDPCM(short* &in, short* &out, int length, bool is16Bit){
+        if(is16Bit){
+            short carry = 0;
+            for(int i=0;i<length;i++){
+                short delta = in[i];
+                carry += delta;
+                out[i] = carry;
+            };
+        } else {
+            byte carry = 0;
+            for(int i=0;i<length;i++){
+                byte delta = in[i];
+                carry += delta;
+                out[i] = carry;
+            };
+        }
+    };
+
+    void convertFromADPCM(short* &in, short* &out, int length, bool is16Bit){
+        // okay i dont know how to go from ADPCM to PCM
     }
 
     void read_sample_data(bool verbose) {
@@ -125,18 +148,29 @@ class Sample {
         if (hasFlag(type, 4)){
             length /= 2;
             has16Bits = true;
+            if(verbose) cout << "    Sample is 16-bit\n";
+        } else {
+            if(verbose) cout << "    Sample is 8-bit\n";
         }
         data = new short[length];
+        short* rawData = new short[length];
 
         if (!hasFlag(type, 4)) {
             for (int i = 0; i < length; i++) {
-                data[i] = readSignedByte();
+                rawData[i] = (short)readSignedByte();
             }
         } else {
             for (int i = 0; i < length; i++) {
-                data[i] = readSignedShort();
+                rawData[i] = readSignedShort();
             }
+        };
+        if(verbose) cout << "    Converting sample data from " << name << " to PCM\n";
+        if(isADPCM){
+            
+        } else {
+            convertFromDPCM(rawData, data, length, has16Bits);
         }
+        
         short old_temp = 0, new_temp = 0;
         for (int i = 0; i < length; i++) {
             new_temp = data[i] + old_temp;
@@ -153,7 +187,7 @@ class Sample {
     int type = 0;
     int panning = 0;
     int relative_note = 0;
-    int reserved = 0;
+    bool isADPCM = false;
     string name = "";
     short* data;
 };
