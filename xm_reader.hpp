@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include "adpcm.hpp"
 typedef uint8_t byte;
 typedef int8_t sbyte;
 using namespace std;
@@ -141,6 +142,17 @@ class Sample {
 
     void convertFromADPCM(short* &in, short* &out, int length, bool is16Bit){
         // okay i dont know how to go from ADPCM to PCM
+        /* WAVEHeader  wave;
+        ADPCMHeader adpcm;
+        ifstream in(input, ios::binary);
+        in.read((char*)&adpcm, sizeof(ADPCMHeader));
+        in.read((char*)&wave, sizeof(WAVEHeader));
+        char* samples = new char[wave.subchunk2Size];
+        char* data = new char[adpcm.dataSize];
+        in.read((char*)data, adpcm.dataSize);
+        decompress(data, samples, adpcm); */
+
+        _4ADPCM_to_16Linear(in, out, length);
     }
 
     void read_sample_data(bool verbose) {
